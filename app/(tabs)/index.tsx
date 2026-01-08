@@ -1,98 +1,185 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useKeepAwake } from 'expo-keep-awake';
+import React from 'react';
+import {
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { ControlPanel } from '../../components/ControlPanel';
+import { MetronomeItem } from '../../components/MetronomeItem';
+import { useMetronome } from '../../hooks/useMetronome';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  // Manter tela ligada enquanto usa o app
+  useKeepAwake();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const {
+    metronomes,
+    channels,
+    soundType,
+    toggleMetronome,
+    updateBpm,
+    updateName,
+    updateTimeSignature,
+    addMetronome,
+    deleteMetronome,
+    toggleChannel,
+    changeSoundType,
+    tapTempo,
+  } = useMetronome();
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <Ionicons name="musical-notes" size={24} color="#ffffff" />
+          <Text style={styles.title}>Metronome List</Text>
+        </View>
+        <TouchableOpacity style={styles.helpButton}>
+          <Ionicons name="help-circle-outline" size={28} color="#ffffff" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Control Panel */}
+      <ControlPanel
+        channels={channels}
+        soundType={soundType}
+        onChannelToggle={toggleChannel}
+        onSoundTypeChange={changeSoundType}
+        onTapTempo={tapTempo}
+      />
+
+      {/* Metronome List */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {metronomes.map((metro) => (
+          <MetronomeItem
+            key={metro.id}
+            metronome={metro}
+            onTogglePlay={toggleMetronome}
+            onUpdateBpm={updateBpm}
+            onUpdateName={updateName}
+            onUpdateTimeSignature={updateTimeSignature}
+            onDelete={deleteMetronome}
+          />
+        ))}
+
+        {/* Add Button */}
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={addMetronome}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="add" size={24} color="#ffffff" />
+          <Text style={styles.addButtonText}>Adicionar Metrônomo</Text>
+        </TouchableOpacity>
+
+        {/* Bottom Spacing */}
+        <View style={styles.bottomSpacer} />
+      </ScrollView>
+
+      {/* Bottom Navigation (placeholder for now) */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity style={styles.navItem}>
+          <Ionicons name="musical-notes" size={24} color="#16a34a" />
+          <Text style={[styles.navText, styles.navTextActive]}>Metrônomo</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navItem}>
+          <Ionicons name="information-circle-outline" size={24} color="#64748b" />
+          <Text style={styles.navText}>Guia Completo</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navItem}>
+          <Ionicons name="information-circle-outline" size={24} color="#64748b" />
+          <Text style={styles.navText}>Sobre</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+  },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    backgroundColor: '#1e293b',
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  helpButton: {
+    padding: 4,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginTop: 8,
+  },
+  addButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#ffffff',
+  },
+  bottomSpacer: {
+    height: 20,
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    backgroundColor: '#1e293b',
+    borderTopWidth: 1,
+    borderTopColor: '#334155',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    justifyContent: 'space-around',
+  },
+  navItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  navText: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  navTextActive: {
+    color: '#16a34a',
   },
 });
