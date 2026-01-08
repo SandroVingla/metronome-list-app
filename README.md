@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-# Metronome List App
-
-Aplicativo mobile do Metronome List, desenvolvido com Expo / React Native.
-=======
 # 🎵 Metronome List - Mobile App
 
 App mobile profissional de metrônomo com múltiplas faixas simultâneas, controle avançado de BPM e gerenciamento de setlists.
@@ -182,4 +177,3 @@ MIT License - veja o arquivo [LICENSE](LICENSE) para detalhes
 ---
 
 ⭐ Se este projeto te ajudou, considere dar uma estrela no GitHub!
->>>>>>> 89e79e7 (feat: setup inicial do projeto)
