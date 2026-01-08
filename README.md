@@ -1,2 +1,3 @@
-# metronome-list-app
-App mobile do Metronome List - Metrônomo profissional
+# Metronome List App
+
+Aplicativo mobile do Metronome List, desenvolvido com Expo / React Native.
