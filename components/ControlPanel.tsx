@@ -1,17 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-    Pressable,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { AudioChannels, SoundType } from '../types';
 
 interface ControlPanelProps {
   channels: AudioChannels;
   soundType: SoundType;
+  calculatedBpm?: number | null;
+  tapCount?: number;
   onChannelToggle: (channel: keyof AudioChannels) => void;
   onSoundTypeChange: (soundType: SoundType) => void;
   onTapTempo: () => void;
@@ -20,6 +22,8 @@ interface ControlPanelProps {
 export const ControlPanel: React.FC<ControlPanelProps> = ({
   channels,
   soundType,
+  calculatedBpm,
+  tapCount = 0,
   onChannelToggle,
   onSoundTypeChange,
   onTapTempo,
@@ -76,8 +80,19 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         </Pressable>
 
         {/* Tap Tempo Button */}
-        <TouchableOpacity style={styles.tapButton} onPress={onTapTempo}>
-          <Text style={styles.tapButtonText}>Tap</Text>
+        <TouchableOpacity 
+          style={[
+            styles.tapButton,
+            calculatedBpm && styles.tapButtonActive
+          ]} 
+          onPress={onTapTempo}
+        >
+          <Text style={styles.tapButtonText}>
+            {calculatedBpm ? `${calculatedBpm}` : 'Tap'}
+          </Text>
+          {tapCount > 0 && !calculatedBpm && (
+            <Text style={styles.tapCountText}>{tapCount}</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -169,11 +184,21 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 24,
     paddingVertical: 8,
+    minWidth: 70,
+    alignItems: 'center',
+  },
+  tapButtonActive: {
+    backgroundColor: '#22c55e',
   },
   tapButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  tapCountText: {
+    fontSize: 10,
+    color: '#dcfce7',
+    marginTop: 2,
   },
   pickerContainer: {
     marginTop: 8,

@@ -22,6 +22,8 @@ export default function HomeScreen() {
     metronomes,
     channels,
     soundType,
+    calculatedBpm,
+    tapCount,
     toggleMetronome,
     updateBpm,
     updateName,
@@ -52,6 +54,8 @@ export default function HomeScreen() {
       <ControlPanel
         channels={channels}
         soundType={soundType}
+        calculatedBpm={calculatedBpm}
+        tapCount={tapCount}
         onChannelToggle={toggleChannel}
         onSoundTypeChange={changeSoundType}
         onTapTempo={tapTempo}
@@ -88,24 +92,6 @@ export default function HomeScreen() {
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
-
-      {/* Bottom Navigation (placeholder for now) */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="musical-notes" size={24} color="#16a34a" />
-          <Text style={[styles.navText, styles.navTextActive]}>Metrônomo</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="information-circle-outline" size={24} color="#64748b" />
-          <Text style={styles.navText}>Guia Completo</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="information-circle-outline" size={24} color="#64748b" />
-          <Text style={styles.navText}>Sobre</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
@@ -161,25 +147,5 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 20,
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: '#1e293b',
-    borderTopWidth: 1,
-    borderTopColor: '#334155',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    justifyContent: 'space-around',
-  },
-  navItem: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  navText: {
-    fontSize: 12,
-    color: '#64748b',
-  },
-  navTextActive: {
-    color: '#16a34a',
   },
 });

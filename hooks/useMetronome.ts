@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useState } from 'react';
 import { audioService } from '../services/audioService';
 import { AudioChannels, BPM_DEFAULT, Metronome, SoundType, TimeSignature } from '../types';
+import { useTapTempo } from './useTapTempo';
 
 export const useMetronome = () => {
   // Estado dos metrônomos
@@ -44,6 +45,9 @@ export const useMetronome = () => {
 
   const [soundType, setSoundType] = useState<SoundType>('original');
   const [hapticEnabled, setHapticEnabled] = useState(true);
+
+  // Tap Tempo hook
+  const { tapTempo: performTap, calculatedBpm, tapCount, reset: resetTap } = useTapTempo();
 
   // Inicializar metrônomos no audioService
   useEffect(() => {
@@ -210,10 +214,14 @@ export const useMetronome = () => {
   }, []);
 
   // Tap Tempo (para implementar depois)
-  const tapTempo = useCallback(() => {
-    // TODO: Implementar lógica de tap tempo
-    console.log('Tap tempo - a implementar');
-  }, []);
+  const tapTempo = useCallback(async () => {
+    // Haptic feedback
+    if (hapticEnabled) {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    
+    performTap();
+  }, [hapticEnabled, performTap]);
 
   return {
     // Estado
@@ -221,6 +229,8 @@ export const useMetronome = () => {
     channels,
     soundType,
     hapticEnabled,
+    calculatedBpm,
+    tapCount,
 
     // Ações
     toggleMetronome,
@@ -233,6 +243,7 @@ export const useMetronome = () => {
     changeSoundType,
     stopAll,
     tapTempo,
+    resetTap,
     setHapticEnabled,
   };
 };
