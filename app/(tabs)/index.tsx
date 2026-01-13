@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useKeepAwake } from 'expo-keep-awake';
 import React from 'react';
 import {
+  FlatList,
   SafeAreaView,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -62,14 +62,11 @@ export default function HomeScreen() {
       />
 
       {/* Metronome List */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {metronomes.map((metro) => (
+      <FlatList
+        data={metronomes}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item: metro }) => (
           <MetronomeItem
-            key={metro.id}
             metronome={metro}
             onTogglePlay={toggleMetronome}
             onUpdateBpm={updateBpm}
@@ -77,21 +74,23 @@ export default function HomeScreen() {
             onUpdateTimeSignature={updateTimeSignature}
             onDelete={deleteMetronome}
           />
-        ))}
-
-        {/* Add Button */}
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={addMetronome}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="add" size={24} color="#ffffff" />
-          <Text style={styles.addButtonText}>Adicionar Metrônomo</Text>
-        </TouchableOpacity>
-
-        {/* Bottom Spacing */}
-        <View style={styles.bottomSpacer} />
-      </ScrollView>
+        )}
+        contentContainerStyle={styles.listContent}
+        ListFooterComponent={
+          <>
+            {/* Add Button */}
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={addMetronome}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="add" size={24} color="#ffffff" />
+              <Text style={styles.addButtonText}>Adicionar Metrônomo</Text>
+            </TouchableOpacity>
+            <View style={styles.bottomSpacer} />
+          </>
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -127,7 +126,7 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  scrollContent: {
+  listContent: {
     padding: 16,
   },
   addButton: {

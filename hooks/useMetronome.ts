@@ -67,6 +67,8 @@ export const useMetronome = () => {
       const metro = metronomes.find((m) => m.id === id);
       if (!metro) return;
 
+      console.log('Toggle metrônomo:', id, 'isPlaying:', metro.isPlaying);
+
       // Haptic feedback
       if (hapticEnabled) {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -74,21 +76,27 @@ export const useMetronome = () => {
 
       if (metro.isPlaying) {
         // Parar
+        console.log('Parando metrônomo:', id);
         await audioService.stopMetronome(id);
         setMetronomes((prev) =>
           prev.map((m) => (m.id === id ? { ...m, isPlaying: false } : m))
         );
       } else {
         // Iniciar
+        console.log('Iniciando metrônomo:', id);
+        
+        // Atualizar estado ANTES de iniciar o áudio
+        setMetronomes((prev) =>
+          prev.map((m) => (m.id === id ? { ...m, isPlaying: true } : m))
+        );
+        
+        // Iniciar áudio
         await audioService.startMetronome(
           id,
           metro.bpm,
           metro.timeSignature,
           soundType,
           channels
-        );
-        setMetronomes((prev) =>
-          prev.map((m) => (m.id === id ? { ...m, isPlaying: true } : m))
         );
       }
     },

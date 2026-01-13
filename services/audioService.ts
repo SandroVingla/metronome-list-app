@@ -77,14 +77,19 @@ class MetronomeAudioManager {
   // Tocar um click
   private async playClick(isAccented: boolean = false) {
     try {
-      if (this.soundPool.length === 0) {
-        console.warn('Pool de sons vazio');
+      if (this.soundPool.length === 0 || !this.isPlaying) {
         return;
       }
 
       // Pegar próximo som do pool
       const sound = this.soundPool[this.currentSoundIndex];
       this.currentSoundIndex = (this.currentSoundIndex + 1) % this.poolSize;
+
+      // Parar som se ainda estiver tocando
+      const status = await sound.getStatusAsync();
+      if (status.isLoaded && status.isPlaying) {
+        await sound.stopAsync();
+      }
 
       // Resetar e tocar
       await sound.setPositionAsync(0);
@@ -112,27 +117,39 @@ class MetronomeAudioManager {
     soundType: SoundType,
     channels: AudioChannels
   ): Promise<void> {
+    console.log('=== START chamado ===');
+    
+    // Parar se já estiver tocando
+    if (this.isPlaying) {
+      console.log('Já estava tocando, parando primeiro...');
+      await this.stop();
+    }
+
     if (!this.isInitialized) {
       await this.initializeAudio();
     }
 
     // Salvar configurações
     this.bpm = bpm;
-    this.soundType = soundType;
     this.beatsInMeasure = this.getBeatsInMeasure(timeSignature);
-    this.isPlaying = true;
 
-    // Carregar pool de sons
-    await this.loadSound(soundType);
+    // Carregar pool de sons APENAS se mudou o tipo ou não existe
+    if (this.soundType !== soundType || this.soundPool.length === 0) {
+      console.log('Carregando novo som:', soundType);
+      this.soundType = soundType;
+      await this.loadSound(soundType);
+    }
 
     console.log('Iniciando metrônomo:', bpm, 'BPM, Compasso:', timeSignature, '(', this.beatsInMeasure, 'tempos)');
 
     // Calcular intervalo em milissegundos
     const interval = (60 / bpm) * 1000;
     
-    // Resetar contador (começar em -1 para que o primeiro click seja 0 - acentuado)
+    // Resetar contador
     this.currentBeat = -1;
-    this.nextBeatTime = Date.now();
+
+    // IMPORTANTE: Marcar como playing ANTES de começar o loop
+    this.isPlaying = true;
 
     // Loop de timing preciso
     const startTime = Date.now();
@@ -144,7 +161,6 @@ class MetronomeAudioManager {
       const now = Date.now();
       const expectedTime = startTime + (beatCount * interval);
       
-      // Se chegou a hora do próximo beat (com 5ms de tolerância)
       if (now >= expectedTime - 5) {
         this.currentBeat = (this.currentBeat + 1) % this.beatsInMeasure;
         const isAccented = this.currentBeat === 0;
@@ -152,18 +168,35 @@ class MetronomeAudioManager {
         this.playClick(isAccented);
         beatCount++;
       }
-    }, 5); // Verificar a cada 5ms
+    }, 5);
+    
+    console.log('Metrônomo iniciado com sucesso!');
   }
 
   // Parar metrônomo
   async stop(): Promise<void> {
+    console.log('Parando metrônomo...');
     this.isPlaying = false;
+    
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
+    
     this.currentBeat = 0;
     this.nextBeatTime = 0;
+
+    // Parar todos os sons do pool
+    try {
+      for (const sound of this.soundPool) {
+        const status = await sound.getStatusAsync();
+        if (status.isLoaded && status.isPlaying) {
+          await sound.stopAsync();
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao parar sons:', error);
+    }
   }
 
   // Atualizar BPM durante reprodução
@@ -184,10 +217,10 @@ class MetronomeAudioManager {
   // Limpar recursos
   async cleanup(): Promise<void> {
     await this.stop();
-    if (this.sound) {
-      await this.sound.unloadAsync();
-      this.sound = null;
+    for (const sound of this.soundPool) {
+      await sound.unloadAsync();
     }
+    this.soundPool = [];
   }
 }
 
