@@ -36,6 +36,9 @@ export const useMetronome = () => {
     },
   ]);
 
+  // Contador para próximo ID
+  const [nextId, setNextId] = useState(4);
+
   // Configurações globais
   const [channels, setChannels] = useState<AudioChannels>({
     L: false,
@@ -61,6 +64,19 @@ export const useMetronome = () => {
     };
   }, []);
 
+  // NOVA FUNÇÃO: Pausar todos os metrônomos
+  const pauseAll = useCallback(async () => {
+    console.log('⏸️ Pausando todos os metrônomos');
+    
+    // Parar todos no audioService
+    await audioService.stopAll();
+    
+    // Atualizar estado
+    setMetronomes((prev) =>
+      prev.map((m) => ({ ...m, isPlaying: false }))
+    );
+  }, []);
+
   // Toggle play/pause de um metrônomo
   const toggleMetronome = useCallback(
     async (id: string) => {
@@ -75,22 +91,32 @@ export const useMetronome = () => {
       }
 
       if (metro.isPlaying) {
-        // Parar
+        // Parar o metrônomo atual
         console.log('Parando metrônomo:', id);
-        await audioService.stopMetronome(id);
         setMetronomes((prev) =>
           prev.map((m) => (m.id === id ? { ...m, isPlaying: false } : m))
         );
+        await audioService.stopMetronome(id);
       } else {
-        // Iniciar
-        console.log('Iniciando metrônomo:', id);
+        // PARAR TODOS OS OUTROS PRIMEIRO
+        const playingMetronomes = metronomes.filter(m => m.isPlaying && m.id !== id);
         
-        // Atualizar estado ANTES de iniciar o áudio
+        for (const m of playingMetronomes) {
+          console.log('Parando outro metrônomo:', m.id);
+          await audioService.stopMetronome(m.id);
+        }
+
+        // Atualizar estado - parar todos e iniciar o selecionado
         setMetronomes((prev) =>
-          prev.map((m) => (m.id === id ? { ...m, isPlaying: true } : m))
+          prev.map((m) => ({
+            ...m,
+            isPlaying: m.id === id,
+          }))
         );
         
-        // Iniciar áudio
+        console.log('Iniciando metrônomo:', id);
+        
+        // Iniciar o metrônomo selecionado
         await audioService.startMetronome(
           id,
           metro.bpm,
@@ -112,12 +138,14 @@ export const useMetronome = () => {
       // Validar BPM (40-300)
       const validBpm = Math.max(40, Math.min(300, newBpm));
 
+      // Atualizar estado
       setMetronomes((prev) =>
         prev.map((m) => (m.id === id ? { ...m, bpm: validBpm } : m))
       );
 
-      // Se estiver tocando, atualizar o áudio
+      // APENAS atualizar áudio se ESTE metrônomo específico estiver tocando
       if (metro.isPlaying) {
+        console.log('Atualizando BPM do metrônomo tocando:', id, validBpm);
         await audioService.updateMetronomeBpm(
           id,
           validBpm,
@@ -125,6 +153,8 @@ export const useMetronome = () => {
           soundType,
           channels
         );
+      } else {
+        console.log('BPM atualizado (metrônomo parado):', id, validBpm);
       }
     },
     [metronomes, soundType, channels]
@@ -166,7 +196,7 @@ export const useMetronome = () => {
 
   // Adicionar novo metrônomo
   const addMetronome = useCallback(() => {
-    const newId = String(Date.now());
+    const newId = String(nextId);
     const newMetronome: Metronome = {
       id: newId,
       name: `Música ${metronomes.length + 1}`,
@@ -178,13 +208,16 @@ export const useMetronome = () => {
     };
 
     setMetronomes((prev) => [...prev, newMetronome]);
+    setNextId(prev => prev + 1);
+    
+    // IMPORTANTE: Criar o audioService imediatamente
     audioService.createMetronome(newId);
 
     // Haptic feedback
     if (hapticEnabled) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-  }, [metronomes, hapticEnabled]);
+  }, [metronomes, nextId, hapticEnabled]);
 
   // Deletar metrônomo
   const deleteMetronome = useCallback(
@@ -221,7 +254,7 @@ export const useMetronome = () => {
     setMetronomes((prev) => prev.map((m) => ({ ...m, isPlaying: false })));
   }, []);
 
-  // Tap Tempo (para implementar depois)
+  // Tap Tempo
   const tapTempo = useCallback(async () => {
     // Haptic feedback
     if (hapticEnabled) {
@@ -250,6 +283,7 @@ export const useMetronome = () => {
     toggleChannel,
     changeSoundType,
     stopAll,
+    pauseAll, // ← NOVA FUNÇÃO
     tapTempo,
     resetTap,
     setHapticEnabled,

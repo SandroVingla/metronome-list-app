@@ -1,67 +1,45 @@
 import { Audio } from 'expo-av';
 import { AudioChannels, SoundType, TimeSignature } from '../types';
 
-// Classe para gerenciar o áudio de cada metrônomo
-class MetronomeAudioManager {
-  private soundPool: Audio.Sound[] = [];
-  private currentSoundIndex: number = 0;
-  private poolSize: number = 4;
-  private intervalId: ReturnType<typeof setInterval> | null = null;
-  private currentBeat: number = 0;
-  private isInitialized: boolean = false;
-  private nextBeatTime: number = 0;
-  private isPlaying: boolean = false;
-  private bpm: number = 120;
-  private beatsInMeasure: number = 4;
-  private soundType: SoundType = 'original';
+// Pool global compartilhado - MAIS SIMPLES
+class SoundPool {
+  private sounds: Map<SoundType, Audio.Sound[]> = new Map();
+  private poolSize = 6;
+  private currentIndex: Map<SoundType, number> = new Map();
 
-  constructor() {
-    this.initializeAudio();
+  async getSound(soundType: SoundType): Promise<Audio.Sound> {
+    // Criar pool se não existe
+    if (!this.sounds.has(soundType)) {
+      await this.createPool(soundType);
+    }
+
+    const pool = this.sounds.get(soundType)!;
+    const index = this.currentIndex.get(soundType) || 0;
+    
+    // Rotacionar índice
+    this.currentIndex.set(soundType, (index + 1) % this.poolSize);
+    
+    return pool[index];
   }
 
-  // Inicializar configurações de áudio
-  private async initializeAudio() {
-    try {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-        shouldDuckAndroid: true,
+  private async createPool(soundType: SoundType): Promise<void> {
+    console.log(`📦 Criando pool: ${soundType}`);
+    
+    const soundSource = this.getSoundSource(soundType);
+    const pool: Audio.Sound[] = [];
+
+    for (let i = 0; i < this.poolSize; i++) {
+      const { sound } = await Audio.Sound.createAsync(soundSource, {
+        shouldPlay: false,
       });
-      this.isInitialized = true;
-      console.log('Áudio inicializado');
-    } catch (error) {
-      console.error('Erro ao inicializar áudio:', error);
+      pool.push(sound);
     }
+
+    this.sounds.set(soundType, pool);
+    this.currentIndex.set(soundType, 0);
+    console.log(`✅ Pool criado: ${soundType}`);
   }
 
-  // Carregar arquivo de som
-  private async loadSound(soundType: SoundType): Promise<void> {
-    try {
-      // Limpar pool antigo
-      for (const sound of this.soundPool) {
-        await sound.unloadAsync();
-      }
-      this.soundPool = [];
-
-      // Criar pool de sons
-      const soundSource = this.getSoundSource(soundType);
-      
-      for (let i = 0; i < this.poolSize; i++) {
-        const { sound } = await Audio.Sound.createAsync(
-          soundSource,
-          { shouldPlay: false }
-        );
-        this.soundPool.push(sound);
-      }
-      
-      this.currentSoundIndex = 0;
-      console.log('Pool de sons carregado:', soundType);
-    } catch (error) {
-      console.error('Erro ao carregar som:', error);
-    }
-  }
-
-  // Mapear tipo de som para arquivo
   private getSoundSource(soundType: SoundType) {
     const sounds = {
       original: require('../assets/sounds/click-original.wav'),
@@ -70,229 +48,222 @@ class MetronomeAudioManager {
       wood: require('../assets/sounds/click-wood.wav'),
       digital: require('../assets/sounds/click-digital.wav'),
     };
-    
     return sounds[soundType] || sounds.original;
   }
 
-  // Tocar um click
-  private async playClick(isAccented: boolean = false) {
+  async cleanup() {
+    for (const pool of this.sounds.values()) {
+      for (const sound of pool) {
+        try {
+          await sound.unloadAsync();
+        } catch (e) {
+          // Ignorar
+        }
+      }
+    }
+    this.sounds.clear();
+    this.currentIndex.clear();
+  }
+}
+
+// Timer preciso com compensação
+class Timer {
+  private timeoutId: NodeJS.Timeout | null = null;
+  private startTime = 0;
+  private interval = 0;
+  private beatCount = 0;
+  private active = false;
+  private callback: () => void;
+
+  constructor(callback: () => void) {
+    this.callback = callback;
+  }
+
+  start(bpm: number) {
+    this.stop();
+    
+    this.interval = (60 / bpm) * 1000;
+    this.startTime = Date.now();
+    this.beatCount = 0;
+    this.active = true;
+
+    // Primeiro beat imediatamente
+    this.callback();
+    this.beatCount++;
+
+    this.scheduleNext();
+    console.log(`▶️ ${bpm} BPM`);
+  }
+
+  private scheduleNext() {
+    if (!this.active) return;
+
+    const nextTime = this.startTime + this.beatCount * this.interval;
+    const delay = Math.max(0, nextTime - Date.now());
+
+    this.timeoutId = setTimeout(() => {
+      if (!this.active) return;
+      
+      this.callback();
+      this.beatCount++;
+      this.scheduleNext();
+    }, delay);
+  }
+
+  stop() {
+    this.active = false;
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+  }
+
+  isRunning() {
+    return this.active;
+  }
+}
+
+// Gerenciador de cada metrônomo
+class MetronomeController {
+  private timer: Timer;
+  private currentBeat = 0;
+  private beatsInMeasure = 4;
+  private soundPool: SoundPool;
+  private soundType: SoundType = 'original';
+
+  constructor(soundPool: SoundPool) {
+    this.soundPool = soundPool;
+    this.timer = new Timer(() => this.playBeat());
+  }
+
+  async start(bpm: number, timeSignature: TimeSignature, soundType: SoundType) {
+    this.stop();
+    
+    this.soundType = soundType;
+    this.beatsInMeasure = parseInt(timeSignature.split('/')[0]);
+    this.currentBeat = 0;
+
+    this.timer.start(bpm);
+  }
+
+  private async playBeat() {
     try {
-      if (this.soundPool.length === 0 || !this.isPlaying) {
-        return;
-      }
-
-      // Pegar próximo som do pool
-      const sound = this.soundPool[this.currentSoundIndex];
-      this.currentSoundIndex = (this.currentSoundIndex + 1) % this.poolSize;
-
-      // Parar som se ainda estiver tocando
-      const status = await sound.getStatusAsync();
-      if (status.isLoaded && status.isPlaying) {
-        await sound.stopAsync();
-      }
-
-      // Resetar e tocar
+      const sound = await this.soundPool.getSound(this.soundType);
+      const isAccented = this.currentBeat === 0;
+      
       await sound.setPositionAsync(0);
       await sound.setVolumeAsync(isAccented ? 1.0 : 0.7);
       await sound.playAsync();
 
-      console.log('Click:', this.currentBeat, isAccented ? 'ACENTUADO' : 'normal');
+      this.currentBeat = (this.currentBeat + 1) % this.beatsInMeasure;
     } catch (error) {
-      console.error('Erro ao tocar click:', error);
+      // Ignorar erros
     }
   }
 
-  // Calcular quantos tempos tem o compasso
-  private getBeatsInMeasure(timeSignature: TimeSignature): number {
-    // Extrair numerador do compasso (ex: "4/4" -> 4, "6/8" -> 6)
-    const numerator = parseInt(timeSignature.split('/')[0]);
-    console.log('Compasso:', timeSignature, '=', numerator, 'tempos');
-    return numerator;
+  stop() {
+    this.timer.stop();
   }
 
-  // Iniciar metrônomo
-  async start(
-    bpm: number,
-    timeSignature: TimeSignature,
-    soundType: SoundType,
-    channels: AudioChannels
-  ): Promise<void> {
-    console.log('=== START chamado ===');
-    
-    // Parar se já estiver tocando
-    if (this.isPlaying) {
-      console.log('Já estava tocando, parando primeiro...');
-      await this.stop();
-    }
-
-    if (!this.isInitialized) {
-      await this.initializeAudio();
-    }
-
-    // Salvar configurações
-    this.bpm = bpm;
-    this.beatsInMeasure = this.getBeatsInMeasure(timeSignature);
-
-    // Carregar pool de sons APENAS se mudou o tipo ou não existe
-    if (this.soundType !== soundType || this.soundPool.length === 0) {
-      console.log('Carregando novo som:', soundType);
-      this.soundType = soundType;
-      await this.loadSound(soundType);
-    }
-
-    console.log('Iniciando metrônomo:', bpm, 'BPM, Compasso:', timeSignature, '(', this.beatsInMeasure, 'tempos)');
-
-    // Calcular intervalo em milissegundos
-    const interval = (60 / bpm) * 1000;
-    
-    // Resetar contador
-    this.currentBeat = -1;
-
-    // IMPORTANTE: Marcar como playing ANTES de começar o loop
-    this.isPlaying = true;
-
-    // Loop de timing preciso
-    const startTime = Date.now();
-    let beatCount = 0;
-
-    this.intervalId = setInterval(() => {
-      if (!this.isPlaying) return;
-
-      const now = Date.now();
-      const expectedTime = startTime + (beatCount * interval);
-      
-      if (now >= expectedTime - 5) {
-        this.currentBeat = (this.currentBeat + 1) % this.beatsInMeasure;
-        const isAccented = this.currentBeat === 0;
-        
-        this.playClick(isAccented);
-        beatCount++;
-      }
-    }, 5);
-    
-    console.log('Metrônomo iniciado com sucesso!');
-  }
-
-  // Parar metrônomo
-  async stop(): Promise<void> {
-    console.log('Parando metrônomo...');
-    this.isPlaying = false;
-    
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-    
-    this.currentBeat = 0;
-    this.nextBeatTime = 0;
-
-    // Parar todos os sons do pool
-    try {
-      for (const sound of this.soundPool) {
-        const status = await sound.getStatusAsync();
-        if (status.isLoaded && status.isPlaying) {
-          await sound.stopAsync();
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao parar sons:', error);
-    }
-  }
-
-  // Atualizar BPM durante reprodução
-  async updateBpm(
-    newBpm: number,
-    timeSignature: TimeSignature,
-    soundType: SoundType,
-    channels: AudioChannels
-  ): Promise<void> {
-    const wasPlaying = this.intervalId !== null;
-    
-    if (wasPlaying) {
-      await this.stop();
-      await this.start(newBpm, timeSignature, soundType, channels);
-    }
-  }
-
-  // Limpar recursos
-  async cleanup(): Promise<void> {
-    await this.stop();
-    for (const sound of this.soundPool) {
-      await sound.unloadAsync();
-    }
-    this.soundPool = [];
+  isPlaying() {
+    return this.timer.isRunning();
   }
 }
 
-// Gerenciador global de múltiplos metrônomos
+// Service principal
 class AudioService {
-  private metronomes: Map<string, MetronomeAudioManager> = new Map();
+  private soundPool: SoundPool;
+  private controllers: Map<string, MetronomeController> = new Map();
+  private initialized = false;
 
-  // Criar um novo metrônomo
-  createMetronome(id: string): void {
-    if (!this.metronomes.has(id)) {
-      this.metronomes.set(id, new MetronomeAudioManager());
+  constructor() {
+    this.soundPool = new SoundPool();
+    this.initAudio();
+  }
+
+  private async initAudio() {
+    if (this.initialized) return;
+
+    try {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+        shouldDuckAndroid: true,
+        interruptionModeIOS: 1,
+        interruptionModeAndroid: 1,
+      });
+      this.initialized = true;
+      console.log('🔊 Áudio OK');
+    } catch (error) {
+      console.error('❌ Erro áudio:', error);
     }
   }
 
-  // Iniciar metrônomo específico
+  createMetronome(id: string) {
+    if (!this.controllers.has(id)) {
+      console.log(`🆕 Criando: ${id}`);
+      this.controllers.set(id, new MetronomeController(this.soundPool));
+    }
+  }
+
   async startMetronome(
     id: string,
     bpm: number,
     timeSignature: TimeSignature,
     soundType: SoundType,
     channels: AudioChannels
-  ): Promise<void> {
-    const metronome = this.metronomes.get(id);
-    if (metronome) {
-      await metronome.start(bpm, timeSignature, soundType, channels);
+  ) {
+    const controller = this.controllers.get(id);
+    if (!controller) {
+      console.error(`❌ ${id} não existe`);
+      return;
+    }
+
+    console.log(`🎵 Start ${id}: ${bpm} BPM`);
+    await controller.start(bpm, timeSignature, soundType);
+  }
+
+  async stopMetronome(id: string) {
+    const controller = this.controllers.get(id);
+    if (controller) {
+      controller.stop();
+      console.log(`⏹️ Stop ${id}`);
     }
   }
 
-  // Parar metrônomo específico
-  async stopMetronome(id: string): Promise<void> {
-    const metronome = this.metronomes.get(id);
-    if (metronome) {
-      await metronome.stop();
-    }
-  }
-
-  // Atualizar BPM de metrônomo específico
   async updateMetronomeBpm(
     id: string,
     newBpm: number,
     timeSignature: TimeSignature,
     soundType: SoundType,
     channels: AudioChannels
-  ): Promise<void> {
-    const metronome = this.metronomes.get(id);
-    if (metronome) {
-      await metronome.updateBpm(newBpm, timeSignature, soundType, channels);
+  ) {
+    const controller = this.controllers.get(id);
+    if (controller?.isPlaying()) {
+      console.log(`🔄 ${id}: ${newBpm} BPM`);
+      await this.stopMetronome(id);
+      await this.startMetronome(id, newBpm, timeSignature, soundType, channels);
     }
   }
 
-  // Remover metrônomo
-  async removeMetronome(id: string): Promise<void> {
-    const metronome = this.metronomes.get(id);
-    if (metronome) {
-      await metronome.cleanup();
-      this.metronomes.delete(id);
+  async removeMetronome(id: string) {
+    await this.stopMetronome(id);
+    this.controllers.delete(id);
+    console.log(`🗑️ Removido: ${id}`);
+  }
+
+  async stopAll() {
+    for (const id of this.controllers.keys()) {
+      await this.stopMetronome(id);
     }
   }
 
-  // Parar todos os metrônomos
-  async stopAll(): Promise<void> {
-    const promises = Array.from(this.metronomes.values()).map(m => m.stop());
-    await Promise.all(promises);
-  }
-
-  // Limpar todos os recursos
-  async cleanup(): Promise<void> {
-    const promises = Array.from(this.metronomes.values()).map(m => m.cleanup());
-    await Promise.all(promises);
-    this.metronomes.clear();
+  async cleanup() {
+    await this.stopAll();
+    await this.soundPool.cleanup();
+    this.controllers.clear();
+    console.log('🧹 Cleanup');
   }
 }
 
-// Exportar instância única (singleton)
 export const audioService = new AudioService();

@@ -1,8 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-  FlatList,
-  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -11,6 +9,7 @@ import {
   View
 } from 'react-native';
 import { Metronome, TimeSignature } from '../types';
+import { BpmPickerWheel } from './BpmPickerWheel';
 
 interface MetronomeItemProps {
   metronome: Metronome;
@@ -19,6 +18,7 @@ interface MetronomeItemProps {
   onUpdateName: (id: string, name: string) => void;
   onUpdateTimeSignature: (id: string, timeSignature: TimeSignature) => void;
   onDelete: (id: string) => void;
+  onPauseAll?: () => void;
 }
 
 export const MetronomeItem: React.FC<MetronomeItemProps> = ({
@@ -28,18 +28,23 @@ export const MetronomeItem: React.FC<MetronomeItemProps> = ({
   onUpdateName,
   onUpdateTimeSignature,
   onDelete,
+  onPauseAll,
 }) => {
   const [showTimeSignaturePicker, setShowTimeSignaturePicker] = useState(false);
   const [showBpmPicker, setShowBpmPicker] = useState(false);
 
   const timeSignatures: TimeSignature[] = ['2/4', '3/4', '4/4', '5/4', '6/8', '7/8', '9/8', '12/8'];
-  
-  // Gerar valores de BPM de 40 a 300
-  const bpmValues = Array.from({ length: 261 }, (_, i) => i + 40); // 40 a 300
 
   const handleBpmSelect = (bpm: number) => {
     onUpdateBpm(metronome.id, bpm);
-    setShowBpmPicker(false);
+  };
+
+  const handleOpenBpmPicker = () => {
+    // SEMPRE pausar TODOS ao abrir modal de BPM
+    if (onPauseAll) {
+      onPauseAll();
+    }
+    setShowBpmPicker(true);
   };
 
   return (
@@ -81,7 +86,7 @@ export const MetronomeItem: React.FC<MetronomeItemProps> = ({
         {/* BPM Picker Button */}
         <TouchableOpacity
           style={styles.bpmContainer}
-          onPress={() => setShowBpmPicker(true)}
+          onPress={handleOpenBpmPicker}
         >
           <Text style={styles.bpmValue}>{metronome.bpm}</Text>
           <Text style={styles.bpmLabel}>BPM</Text>
@@ -125,52 +130,13 @@ export const MetronomeItem: React.FC<MetronomeItemProps> = ({
         </View>
       )}
 
-      {/* BPM Picker Modal */}
-      <Modal
+      {/* BPM Picker Wheel Modal */}
+      <BpmPickerWheel
         visible={showBpmPicker}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowBpmPicker(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.bpmPickerModal}>
-            <View style={styles.bpmPickerHeader}>
-              <Text style={styles.bpmPickerTitle}>Selecione o BPM</Text>
-              <TouchableOpacity onPress={() => setShowBpmPicker(false)}>
-                <Ionicons name="close" size={24} color="#ffffff" />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={bpmValues}
-              keyExtractor={(item) => item.toString()}
-              renderItem={({ item: bpm }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.bpmPickerItem,
-                    bpm === metronome.bpm && styles.bpmPickerItemActive,
-                  ]}
-                  onPress={() => handleBpmSelect(bpm)}
-                >
-                  <Text
-                    style={[
-                      styles.bpmPickerItemText,
-                      bpm === metronome.bpm && styles.bpmPickerItemTextActive,
-                    ]}
-                  >
-                    {bpm} BPM
-                  </Text>
-                </TouchableOpacity>
-              )}
-              initialScrollIndex={metronome.bpm - 40}
-              getItemLayout={(data, index) => ({
-                length: 57,
-                offset: 57 * index,
-                index,
-              })}
-            />
-          </View>
-        </View>
-      </Modal>
+        currentBpm={metronome.bpm}
+        onSelect={handleBpmSelect}
+        onClose={() => setShowBpmPicker(false)}
+      />
     </View>
   );
 };
@@ -276,51 +242,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   pickerItemTextActive: {
-    color: '#ffffff',
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'flex-end',
-  },
-  bpmPickerModal: {
-    height: '70%',
-    backgroundColor: '#1e293b',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  bpmPickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-  },
-  bpmPickerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  bpmPickerScroll: {
-    flex: 1,
-  },
-  bpmPickerItem: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-  },
-  bpmPickerItemActive: {
-    backgroundColor: '#16a34a',
-  },
-  bpmPickerItemText: {
-    fontSize: 16,
-    color: '#cbd5e1',
-    textAlign: 'center',
-  },
-  bpmPickerItemTextActive: {
     color: '#ffffff',
     fontWeight: '600',
   },

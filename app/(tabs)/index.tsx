@@ -33,6 +33,7 @@ export default function HomeScreen() {
     toggleChannel,
     changeSoundType,
     tapTempo,
+    pauseAll, // ← NOVA FUNÇÃO
   } = useMetronome();
 
   return (
@@ -73,6 +74,7 @@ export default function HomeScreen() {
             onUpdateName={updateName}
             onUpdateTimeSignature={updateTimeSignature}
             onDelete={deleteMetronome}
+            onPauseAll={pauseAll} // ← PASSANDO A FUNÇÃO
           />
         )}
         contentContainerStyle={styles.listContent}
