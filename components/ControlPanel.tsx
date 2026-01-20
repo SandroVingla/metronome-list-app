@@ -42,27 +42,34 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
     return soundTypes.find((s) => s.value === soundType)?.label || 'Click Original';
   };
 
+  // Corrigido: L ao invés de 'p'
+  const channelButtons: { key: keyof AudioChannels; label: string }[] = [
+    { key: 'L', label: 'L' },
+    { key: 'R', label: 'R' },
+    { key: 'C', label: 'C' },
+  ];
+
   return (
     <View style={styles.container}>
       <View style={styles.row}>
         {/* Channel Buttons L/R/C */}
         <View style={styles.channelGroup}>
-          {(['L', 'R', 'C'] as const).map((channel) => (
+          {channelButtons.map(({ key, label }) => (
             <TouchableOpacity
-              key={channel}
+              key={key}
               style={[
                 styles.channelButton,
-                channels[channel] && styles.channelButtonActive,
+                channels[key] && styles.channelButtonActive,
               ]}
-              onPress={() => onChannelToggle(channel)}
+              onPress={() => onChannelToggle(key)}
             >
               <Text
                 style={[
                   styles.channelText,
-                  channels[channel] && styles.channelTextActive,
+                  channels[key] && styles.channelTextActive,
                 ]}
               >
-                {channel}
+                {label}
               </Text>
             </TouchableOpacity>
           ))}
@@ -154,7 +161,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   channelButtonActive: {
-    backgroundColor: '#475569',
+    backgroundColor: '#16a34a',
   },
   channelText: {
     fontSize: 16,

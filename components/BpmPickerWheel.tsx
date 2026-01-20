@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useRef, useState } from 'react';
 import {
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 interface BpmPickerWheelProps {
@@ -29,6 +29,7 @@ export const BpmPickerWheel: React.FC<BpmPickerWheelProps> = ({
   const bpmValues = Array.from({ length: 261 }, (_, i) => i + 40);
   
   const ITEM_HEIGHT = 60;
+  const VISIBLE_ITEMS = 5; // Quantos items são visíveis (centro ± 2)
 
   const handleScroll = (event: any) => {
     const offsetY = event.nativeEvent.contentOffset.y;
@@ -46,13 +47,17 @@ export const BpmPickerWheel: React.FC<BpmPickerWheelProps> = ({
 
   // Scroll para o BPM atual quando abrir
   const handleLayout = () => {
-    const index = bpmValues.indexOf(currentBpm);
-    if (index !== -1 && scrollViewRef.current) {
-      scrollViewRef.current.scrollTo({
-        y: index * ITEM_HEIGHT,
-        animated: false,
-      });
-    }
+    // Pequeno delay para garantir que o layout está pronto
+    setTimeout(() => {
+      const index = bpmValues.indexOf(currentBpm);
+      if (index !== -1 && scrollViewRef.current) {
+        // Scroll para centralizar o item selecionado
+        scrollViewRef.current.scrollTo({
+          y: index * ITEM_HEIGHT,
+          animated: false,
+        });
+      }
+    }, 100);
   };
 
   return (
@@ -85,14 +90,14 @@ export const BpmPickerWheel: React.FC<BpmPickerWheelProps> = ({
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
               snapToInterval={ITEM_HEIGHT}
+              snapToAlignment="center"
               decelerationRate="fast"
               onScroll={handleScroll}
               scrollEventThrottle={16}
               onLayout={handleLayout}
+              contentInset={{ top: ITEM_HEIGHT * 2, bottom: ITEM_HEIGHT * 2 }}
+              contentOffset={{ x: 0, y: -ITEM_HEIGHT * 2 }}
             >
-              {/* Padding superior */}
-              <View style={{ height: ITEM_HEIGHT * 2 }} />
-              
               {/* Items */}
               {bpmValues.map((bpm, index) => {
                 const isSelected = bpm === selectedBpm;
@@ -123,9 +128,6 @@ export const BpmPickerWheel: React.FC<BpmPickerWheelProps> = ({
                   </View>
                 );
               })}
-              
-              {/* Padding inferior */}
-              <View style={{ height: ITEM_HEIGHT * 2 }} />
             </ScrollView>
 
             {/* Linha de seleção inferior */}
@@ -244,7 +246,7 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     margin: 20,
-    backgroundColor: '#149605',
+    backgroundColor: '#f97316',
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
