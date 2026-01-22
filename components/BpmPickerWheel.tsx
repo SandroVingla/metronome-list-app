@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  FlatList,
   Modal,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  ViewToken,
 } from 'react-native';
 
 interface BpmPickerWheelProps {
@@ -16,49 +17,135 @@ interface BpmPickerWheelProps {
   onClose: () => void;
 }
 
+const ITEM_HEIGHT = 60;
+
 export const BpmPickerWheel: React.FC<BpmPickerWheelProps> = ({
   visible,
   currentBpm,
   onSelect,
   onClose,
 }) => {
-  const scrollViewRef = useRef<ScrollView>(null);
+  const flatListRef = useRef<FlatList>(null);
   const [selectedBpm, setSelectedBpm] = useState(currentBpm);
   
   // BPM de 40 a 300
   const bpmValues = Array.from({ length: 261 }, (_, i) => i + 40);
-  
-  const ITEM_HEIGHT = 60;
-  const VISIBLE_ITEMS = 5; // Quantos items são visíveis (centro ± 2)
+
+  // Scroll para o BPM atual quando abrir
+  useEffect(() => {
+    if (visible && flatListRef.current) {
+      setTimeout(() => {
+        const index = bpmValues.indexOf(currentBpm);
+        if (index !== -1) {
+          // Scroll para a posição exata (offset = index * height)
+          flatListRef.current?.scrollToOffset({
+            offset: index * ITEM_HEIGHT,
+            animated: false,
+          });
+          setSelectedBpm(currentBpm);
+        }
+      }, 300);
+    }
+  }, [visible]);
+
+  const handleViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    // Não faz nada - vamos usar onMomentumScrollEnd
+  }).current;
 
   const handleScroll = (event: any) => {
     const offsetY = event.nativeEvent.contentOffset.y;
     const index = Math.round(offsetY / ITEM_HEIGHT);
+    const bpm = bpmValues[index];
+    
+    if (bpm && bpm >= 40 && bpm <= 300) {
+      setSelectedBpm(bpm);
+    }
+  };
+
+  const handleScrollEndDrag = (event: any) => {
+    // Não fazer snap aqui - deixar o momentum scroll acontecer
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const bpm = bpmValues[index];
+    
+    if (bpm) {
+      setSelectedBpm(bpm);
+    }
+  };
+
+  const handleMomentumScrollEnd = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    
+    // Fazer snap APENAS quando o scroll terminar completamente
+    const index = Math.round(offsetY / ITEM_HEIGHT);
+    const targetOffset = index * ITEM_HEIGHT;
+    
+    // Snap suave para o item mais próximo
+    flatListRef.current?.scrollToOffset({
+      offset: targetOffset,
+      animated: true,
+    });
+    
     const bpm = bpmValues[index];
     if (bpm) {
       setSelectedBpm(bpm);
     }
   };
 
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+  }).current;
+
   const handleConfirm = () => {
     onSelect(selectedBpm);
     onClose();
   };
 
-  // Scroll para o BPM atual quando abrir
-  const handleLayout = () => {
-    // Pequeno delay para garantir que o layout está pronto
-    setTimeout(() => {
-      const index = bpmValues.indexOf(currentBpm);
-      if (index !== -1 && scrollViewRef.current) {
-        // Scroll para centralizar o item selecionado
-        scrollViewRef.current.scrollTo({
-          y: index * ITEM_HEIGHT,
-          animated: false,
-        });
-      }
-    }, 100);
+  const scrollToBpm = (bpm: number) => {
+    const index = bpmValues.indexOf(bpm);
+    if (index !== -1 && flatListRef.current) {
+      // Scroll para posição exata
+      flatListRef.current.scrollToOffset({
+        offset: index * ITEM_HEIGHT,
+        animated: true,
+      });
+      setSelectedBpm(bpm);
+    }
   };
+
+  const renderItem = ({ item: bpm }: { item: number }) => {
+    const isSelected = bpm === selectedBpm;
+    const distance = Math.abs(bpm - selectedBpm);
+    const opacity = Math.max(0.3, 1 - distance * 0.1);
+    const scale = isSelected ? 1.1 : Math.max(0.7, 1 - distance * 0.05);
+
+    return (
+      <TouchableOpacity
+        style={[styles.item, { height: ITEM_HEIGHT }]}
+        activeOpacity={0.7}
+        onPress={() => scrollToBpm(bpm)}
+      >
+        <Text
+          style={[
+            styles.itemText,
+            isSelected && styles.itemTextSelected,
+            {
+              opacity,
+              transform: [{ scale }],
+            },
+          ]}
+        >
+          {bpm}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const getItemLayout = (_: any, index: number) => ({
+    length: ITEM_HEIGHT,
+    offset: ITEM_HEIGHT * index,
+    index,
+  });
 
   return (
     <Modal
@@ -80,57 +167,31 @@ export const BpmPickerWheel: React.FC<BpmPickerWheelProps> = ({
 
           {/* Picker Wheel */}
           <View style={styles.pickerContainer}>
-            {/* Linha de seleção superior */}
+            {/* Área de seleção com fundo */}
+            <View style={styles.selectionArea} />
+            
+            {/* Linha superior */}
             <View style={styles.selectionLineTop} />
             
-            {/* ScrollView com valores */}
-            <ScrollView
-              ref={scrollViewRef}
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
+            {/* FlatList */}
+            <FlatList
+              ref={flatListRef}
+              data={bpmValues}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.toString()}
+              getItemLayout={getItemLayout}
               showsVerticalScrollIndicator={false}
-              snapToInterval={ITEM_HEIGHT}
-              snapToAlignment="center"
               decelerationRate="fast"
               onScroll={handleScroll}
               scrollEventThrottle={16}
-              onLayout={handleLayout}
-              contentInset={{ top: ITEM_HEIGHT * 2, bottom: ITEM_HEIGHT * 2 }}
-              contentOffset={{ x: 0, y: -ITEM_HEIGHT * 2 }}
-            >
-              {/* Items */}
-              {bpmValues.map((bpm, index) => {
-                const isSelected = bpm === selectedBpm;
-                const distance = Math.abs(bpm - selectedBpm);
-                const opacity = Math.max(0.2, 1 - distance * 0.03);
-                const scale = isSelected ? 1 : Math.max(0.6, 1 - distance * 0.02);
+              onMomentumScrollEnd={handleMomentumScrollEnd}
+              onScrollEndDrag={handleScrollEndDrag}
+              contentContainerStyle={styles.listContent}
+              onScrollToIndexFailed={() => {}}
+              removeClippedSubviews={false}
+            />
 
-                return (
-                  <View
-                    key={bpm}
-                    style={[
-                      styles.item,
-                      { height: ITEM_HEIGHT },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.itemText,
-                        isSelected && styles.itemTextSelected,
-                        {
-                          opacity,
-                          transform: [{ scale }],
-                        },
-                      ]}
-                    >
-                      {bpm}
-                    </Text>
-                  </View>
-                );
-              })}
-            </ScrollView>
-
-            {/* Linha de seleção inferior */}
+            {/* Linha inferior */}
             <View style={styles.selectionLineBottom} />
 
             {/* Label BPM */}
@@ -139,14 +200,24 @@ export const BpmPickerWheel: React.FC<BpmPickerWheelProps> = ({
             </View>
           </View>
 
-          {/* Botão Confirmar */}
-          <TouchableOpacity
-            style={styles.confirmButton}
-            onPress={handleConfirm}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.confirmButtonText}>Iniciar</Text>
-          </TouchableOpacity>
+          {/* Botões */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={onClose}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.confirmButton}
+              onPress={handleConfirm}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.confirmButtonText}>Iniciar</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -189,70 +260,93 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   pickerContainer: {
-    height: 300,
+    height: ITEM_HEIGHT * 5, // 5 itens visíveis (300px)
     position: 'relative',
     backgroundColor: '#0f172a',
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingVertical: 0,
+  listContent: {
+    paddingTop: ITEM_HEIGHT * 2, // Padding para que o primeiro item fique centralizado
+    paddingBottom: ITEM_HEIGHT * 2, // Padding para que o último item fique centralizado
   },
   item: {
+    height: ITEM_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingBottom: 2, // Ajuste para centralizar entre as linhas
   },
   itemText: {
-    fontSize: 48,
+    fontSize: 40,
     fontWeight: '700',
     color: '#64748b',
   },
   itemTextSelected: {
     color: '#ffffff',
-    fontSize: 56,
+    fontSize: 48,
+  },
+  selectionArea: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: ITEM_HEIGHT * 2,
+    height: ITEM_HEIGHT,
+    backgroundColor: 'rgba(22, 163, 74, 0.1)',
+    zIndex: 5,
   },
   selectionLineTop: {
     position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: '#f97316',
+    left: 40,
+    right: 40,
+    top: ITEM_HEIGHT * 2,
+    height: 2,
+    backgroundColor: '#16a34a',
     zIndex: 10,
-    marginTop: -30,
   },
   selectionLineBottom: {
     position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: '#f97316',
+    left: 40,
+    right: 40,
+    top: ITEM_HEIGHT * 3,
+    height: 2,
+    backgroundColor: '#16a34a',
     zIndex: 10,
-    marginTop: 30,
   },
   bpmLabel: {
     position: 'absolute',
-    right: 40,
-    top: '50%',
-    marginTop: -10,
+    right: 30,
+    top: ITEM_HEIGHT * 2.5 - 10,
     zIndex: 11,
   },
   bpmLabelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#16a34a',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 20,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#334155',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#64748b',
+    color: '#ffffff',
   },
   confirmButton: {
-    margin: 20,
-    backgroundColor: '#f97316',
+    flex: 1,
+    backgroundColor: '#16a34a',
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
   },
   confirmButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
   },
