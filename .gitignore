@@ -4,6 +4,18 @@
 dist/
 web-build/
 
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtualenv
+.env
+
+
 # Node
 node_modules/
 npm-debug.log*
