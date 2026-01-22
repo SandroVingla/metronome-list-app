@@ -68,7 +68,7 @@ class SoundPool {
 
   private getSoundSource(soundType: SoundType, channel: 'left' | 'right' | 'center') {
     // Mapear para os arquivos corretos
-    const sounds = {
+    const sounds: Record<string, any> = {
       'original-left': require('../assets/sounds/click-original-left.wav'),
       'original-right': require('../assets/sounds/click-original-right.wav'),
       'original-center': require('../assets/sounds/click-original-center.wav'),
@@ -90,8 +90,15 @@ class SoundPool {
       'digital-center': require('../assets/sounds/click-digital-center.wav'),
     };
     
-    const key = `${soundType}-${channel}` as keyof typeof sounds;
-    return sounds[key] || sounds['original-center'];
+    const key = `${soundType}-${channel}`;
+    
+    // Se não existir, usa o center como fallback
+    try {
+      return sounds[key] || sounds[`${soundType}-center`] || sounds['original-center'];
+    } catch (error) {
+      console.warn(`⚠️ Arquivo ${key} não encontrado, usando fallback`);
+      return sounds['original-center'];
+    }
   }
 
   async cleanup() {
@@ -177,14 +184,17 @@ class MetronomeController {
     this.beatsInMeasure = parseInt(timeSignature.split('/')[0]);
     this.currentBeat = 0;
     
+    console.log(`⏳ Carregando sons para: ${soundType}...`);
+    
     // Pré-carregar TODOS os canais possíveis (evita lag ao trocar)
-    const preloadPromises = [
+    // AGUARDAR completar antes de iniciar o timer
+    await Promise.all([
       this.soundPool.getSound(soundType, 'left'),
       this.soundPool.getSound(soundType, 'right'),
       this.soundPool.getSound(soundType, 'center'),
-    ];
+    ]);
     
-    await Promise.all(preloadPromises);
+    console.log(`✅ Sons carregados: ${soundType}`);
     
     this.timer.start(bpm);
   }
