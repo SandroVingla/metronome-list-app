@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
+  Animated,
   Pressable,
   StyleSheet,
   Text,
@@ -8,6 +9,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useBeatPulse } from '../hooks/useBeatPulse';
 import { Metronome, TimeSignature } from '../types';
 import { BpmPickerWheel } from './BpmPickerWheel';
 
@@ -32,6 +34,28 @@ export const MetronomeItem: React.FC<MetronomeItemProps> = ({
 }) => {
   const [showTimeSignaturePicker, setShowTimeSignaturePicker] = useState(false);
   const [showBpmPicker, setShowBpmPicker] = useState(false);
+  
+  // Animação do beat
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+  const { isPulsing } = useBeatPulse({
+    isPlaying: metronome.isPlaying,
+    bpm: metronome.bpm,
+    onBeat: () => {
+      // Animação de pulse
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.15,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    },
+  });
 
   const timeSignatures: TimeSignature[] = ['2/4', '3/4', '4/4', '5/4', '6/8', '7/8', '9/8', '12/8'];
 
@@ -68,20 +92,22 @@ export const MetronomeItem: React.FC<MetronomeItemProps> = ({
 
       {/* Controls - Play, BPM, Time Signature */}
       <View style={styles.controls}>
-        {/* Play Button */}
-        <TouchableOpacity
-          style={[
-            styles.playButton,
-            metronome.isPlaying && styles.playButtonActive,
-          ]}
-          onPress={() => onTogglePlay(metronome.id)}
-        >
-          <Ionicons
-            name={metronome.isPlaying ? 'pause' : 'play'}
-            size={28}
-            color="#ffffff"
-          />
-        </TouchableOpacity>
+        {/* Play Button com animação */}
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+          <TouchableOpacity
+            style={[
+              styles.playButton,
+              metronome.isPlaying && styles.playButtonActive,
+            ]}
+            onPress={() => onTogglePlay(metronome.id)}
+          >
+            <Ionicons
+              name={metronome.isPlaying ? 'pause' : 'play'}
+              size={28}
+              color="#ffffff"
+            />
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* BPM Picker Button */}
         <TouchableOpacity

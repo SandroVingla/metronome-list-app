@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "metronome-list-app",
+    "name": "Metronome List",
     "slug": "metronome-list-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,23 +8,47 @@
     "scheme": "metronomelistapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sandrovingla.metronomelist",
+      "buildNumber": "1"
     },
+    
     "android": {
+      "package": "com.sandrovingla.metronomelist",
+      "versionCode": 1,
+      "permissions": [
+        "VIBRATE",
+        "WAKE_LOCK"
+      ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#E6F4FE"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "splash": {
+        "image": "./assets/images/splash-icon.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#ffffff"
+      }
     },
+    
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "bundler": "metro"
     },
+    
     "plugins": [
       "expo-router",
       [
@@ -33,14 +57,18 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
+          "backgroundColor": "#ffffff"
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      [
+        "expo-av",
+        {
+          "microphonePermission": false
+        }
+      ]
     ],
+    
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

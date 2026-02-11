@@ -15,12 +15,18 @@ class SoundPool {
       await this.createPool(soundType, channel);
     }
 
-    const pool = this.sounds.get(key)!;
+    const pool = this.sounds.get(key);
+    if (!pool || pool.length === 0) {
+      console.error(`❌ Pool vazio para ${key}!`);
+      await this.createPool(soundType, channel);
+    }
+
+    const pool2 = this.sounds.get(key)!;
     const index = this.currentIndex.get(key) || 0;
     
     this.currentIndex.set(key, (index + 1) % this.poolSize);
     
-    return pool[index];
+    return pool2[index];
   }
 
   private async createPool(soundType: SoundType, channel: 'left' | 'right' | 'center'): Promise<void> {
@@ -52,22 +58,31 @@ class SoundPool {
       const pool: Audio.Sound[] = [];
 
       for (let i = 0; i < this.poolSize; i++) {
-        const { sound } = await Audio.Sound.createAsync(soundSource, {
-          shouldPlay: false,
-        });
-        pool.push(sound);
+        try {
+          const { sound } = await Audio.Sound.createAsync(soundSource, {
+            shouldPlay: false,
+          });
+          pool.push(sound);
+        } catch (error) {
+          console.error(`❌ Erro ao criar som ${i} de ${key}:`, error);
+        }
       }
 
-      this.sounds.set(key, pool);
-      this.currentIndex.set(key, 0);
-      console.log(`✅ Pool criado: ${key}`);
+      if (pool.length > 0) {
+        this.sounds.set(key, pool);
+        this.currentIndex.set(key, 0);
+        console.log(`✅ Pool criado: ${key} (${pool.length} sons)`);
+      } else {
+        console.error(`❌ Falha ao criar pool: ${key}`);
+      }
+    } catch (error) {
+      console.error(`❌ Erro crítico ao criar pool ${key}:`, error);
     } finally {
       this.loading.delete(key);
     }
   }
 
   private getSoundSource(soundType: SoundType, channel: 'left' | 'right' | 'center') {
-    // Mapear para os arquivos corretos
     const sounds: Record<string, any> = {
       'original-left': require('../assets/sounds/click-original-left.wav'),
       'original-right': require('../assets/sounds/click-original-right.wav'),
@@ -92,7 +107,6 @@ class SoundPool {
     
     const key = `${soundType}-${channel}`;
     
-    // Se não existir, usa o center como fallback
     try {
       return sounds[key] || sounds[`${soundType}-center`] || sounds['original-center'];
     } catch (error) {
@@ -102,19 +116,55 @@ class SoundPool {
   }
 
   async cleanup() {
-    for (const pool of this.sounds.values()) {
+    console.log('🧹 Limpando SoundPool...');
+    for (const [key, pool] of this.sounds.entries()) {
       for (const sound of pool) {
         try {
-          await sound.unloadAsync();
-        } catch (e) {}
+          const status = await sound.getStatusAsync();
+          if (status.isLoaded) {
+            await sound.unloadAsync();
+          }
+        } catch (e) {
+          // Ignorar
+        }
       }
     }
     this.sounds.clear();
     this.currentIndex.clear();
+    this.loading.clear();
+    console.log('✅ SoundPool limpo');
+  }
+
+  async cleanupSoundType(soundType: SoundType) {
+    console.log(`🧹 Limpando ${soundType}...`);
+    const keysToRemove: string[] = [];
+    
+    for (const [key, pool] of this.sounds.entries()) {
+      if (key.startsWith(soundType)) {
+        keysToRemove.push(key);
+        for (const sound of pool) {
+          try {
+            const status = await sound.getStatusAsync();
+            if (status.isLoaded) {
+              await sound.unloadAsync();
+            }
+          } catch (e) {
+            // Ignorar
+          }
+        }
+      }
+    }
+    
+    keysToRemove.forEach(key => {
+      this.sounds.delete(key);
+      this.currentIndex.delete(key);
+    });
+    
+    console.log(`✅ ${soundType} limpo`);
   }
 }
 
-// Timer
+// Timer preciso
 class Timer {
   private timeoutId: ReturnType<typeof setTimeout> | null = null;
   private startTime = 0;
@@ -140,10 +190,13 @@ class Timer {
 
   private scheduleNext() {
     if (!this.active) return;
+
     const nextTime = this.startTime + this.beatCount * this.interval;
     const delay = Math.max(0, nextTime - Date.now());
+
     this.timeoutId = setTimeout(() => {
       if (!this.active) return;
+
       this.callback();
       this.beatCount++;
       this.scheduleNext();
@@ -163,59 +216,54 @@ class Timer {
   }
 }
 
-// Controller
+// Controller de cada metrônomo
 class MetronomeController {
   private timer: Timer;
-  private currentBeat = 0;
-  private beatsInMeasure = 4;
-  private soundPool: SoundPool;
+  private currentBeat: number = 0;
+  private beatsInMeasure: number = 4;
+  private pool: SoundPool;
   private soundType: SoundType = 'original';
   private channels: AudioChannels = { L: false, R: false, C: true };
 
-  constructor(soundPool: SoundPool) {
-    this.soundPool = soundPool;
+  constructor(pool: SoundPool) {
+    this.pool = pool;
     this.timer = new Timer(() => this.playBeat());
   }
 
   async start(bpm: number, timeSignature: TimeSignature, soundType: SoundType, channels: AudioChannels) {
     this.stop();
+    
+    if (this.soundType && this.soundType !== soundType) {
+      console.log(`🔄 Trocando de ${this.soundType} para ${soundType}`);
+      await this.pool.cleanupSoundType(this.soundType);
+    }
+    
     this.soundType = soundType;
     this.channels = channels;
     this.beatsInMeasure = parseInt(timeSignature.split('/')[0]);
     this.currentBeat = 0;
     
-    console.log(`⏳ Carregando sons para: ${soundType}...`);
+    console.log(`⏳ Carregando ${soundType}...`);
     
-    // Pré-carregar TODOS os canais possíveis (evita lag ao trocar)
-    // AGUARDAR completar antes de iniciar o timer
-    await Promise.all([
-      this.soundPool.getSound(soundType, 'left'),
-      this.soundPool.getSound(soundType, 'right'),
-      this.soundPool.getSound(soundType, 'center'),
-    ]);
-    
-    console.log(`✅ Sons carregados: ${soundType}`);
-    
-    this.timer.start(bpm);
-  }
-
-  private getActiveChannel(): 'left' | 'right' | 'center' {
-    const { L, R, C } = this.channels;
-    
-    // Apenas L
-    if (L && !R && !C) return 'left';
-    
-    // Apenas R
-    if (R && !L && !C) return 'right';
-    
-    // Qualquer coisa com C, ou padrão
-    return 'center';
+    try {
+      await Promise.all([
+        this.pool.getSound(soundType, 'left'),
+        this.pool.getSound(soundType, 'right'),
+        this.pool.getSound(soundType, 'center'),
+      ]);
+      
+      console.log(`✅ ${soundType} pronto`);
+      this.timer.start(bpm);
+    } catch (error) {
+      console.error(`❌ Erro ao carregar:`, error);
+    }
   }
 
   private async playBeat() {
     try {
       const channel = this.getActiveChannel();
-      const sound = await this.soundPool.getSound(this.soundType, channel);
+      const sound = await this.pool.getSound(this.soundType, channel);
+      
       const isAccented = this.currentBeat === 0;
       const volume = isAccented ? 1.0 : 0.7;
 
@@ -223,19 +271,17 @@ class MetronomeController {
       await sound.setVolumeAsync(volume);
       await sound.playAsync();
 
-      // Sem logs durante playback (melhor performance)
-
       this.currentBeat = (this.currentBeat + 1) % this.beatsInMeasure;
     } catch (error) {
-      // Ignorar
+      console.error('❌ Erro playBeat:', error);
     }
   }
 
-  private getPanDescription(): string {
+  private getActiveChannel(): 'left' | 'right' | 'center' {
     const { L, R, C } = this.channels;
-    if (L && !R && !C) return '⬅️ Esquerda';
-    if (R && !L && !C) return '➡️ Direita';
-    return '⏺️ Centro';
+    if (L && !R && !C) return 'left';
+    if (R && !L && !C) return 'right';
+    return 'center';
   }
 
   stop() {
@@ -247,20 +293,20 @@ class MetronomeController {
   }
 }
 
-// Service
+// Service principal
 class AudioService {
-  private soundPool: SoundPool;
+  private pool: SoundPool;
   private controllers: Map<string, MetronomeController> = new Map();
 
   constructor() {
-    this.soundPool = new SoundPool();
-    console.log('🔊 Áudio OK (arquivos L/R/C)');
+    this.pool = new SoundPool();
+    console.log('🔊 Áudio OK');
   }
 
   createMetronome(id: string) {
     if (!this.controllers.has(id)) {
       console.log(`🆕 Criando: ${id}`);
-      this.controllers.set(id, new MetronomeController(this.soundPool));
+      this.controllers.set(id, new MetronomeController(this.pool));
     }
   }
 
@@ -319,7 +365,7 @@ class AudioService {
 
   async cleanup() {
     await this.stopAll();
-    await this.soundPool.cleanup();
+    await this.pool.cleanup();
     this.controllers.clear();
     console.log('🧹 Cleanup');
   }
