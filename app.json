@@ -1,40 +1,36 @@
 {
   "expo": {
-    "name": "Metronome List",
-    "slug": "metronome-list-app",
-    "version": "1.0.0",
+    "name": "Metronome List Lite",
+    "slug": "metronome-list-lite",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "metronomelistapp",
+    "scheme": "metronomelist",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    
     "assetBundlePatterns": [
       "**/*"
     ],
-    
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sandrovingla.metronomelist",
-      "buildNumber": "1"
+      "buildNumber": "3"
     },
-    
     "android": {
       "package": "com.sandrovingla.metronomelist",
-      "versionCode": 1,
+      "versionCode": 3,
       "permissions": [
         "VIBRATE",
         "WAKE_LOCK"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundColor": "#E6F4FE"
+        "backgroundColor": "#dbeafe"
       },
       "splash": {
         "image": "./assets/images/splash-icon.png",
@@ -42,13 +38,11 @@
         "backgroundColor": "#ffffff"
       }
     },
-    
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png",
       "bundler": "metro"
     },
-    
     "plugins": [
       "expo-router",
       [
@@ -68,10 +62,15 @@
         }
       ]
     ],
-    
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "bf7a4ef0-57f4-434c-9552-c55ec8e659f4"
+      }
     }
   }
 }

@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useState } from 'react';
+import { MAX_METRONOMES } from '../constants/limits'; // ✅ ADICIONADO
 import { audioService } from '../services/audioService';
 import { AudioChannels, BPM_DEFAULT, Metronome, SoundType, TimeSignature } from '../types';
 import { useTapTempo } from './useTapTempo';
@@ -194,8 +195,14 @@ export const useMetronome = () => {
     [metronomes, soundType, channels]
   );
 
-  // Adicionar novo metrônomo
+  // ✅ MODIFICADO: Adicionar novo metrônomo COM VALIDAÇÃO DE LIMITE
   const addMetronome = useCallback(() => {
+    // ✅ VALIDAR LIMITE ANTES DE ADICIONAR
+    if (metronomes.length >= MAX_METRONOMES) {
+      console.log('⚠️ Limite de metrônomos atingido');
+      return false; // Retorna false quando não adiciona
+    }
+
     const newId = String(nextId);
     const newMetronome: Metronome = {
       id: newId,
@@ -217,6 +224,8 @@ export const useMetronome = () => {
     if (hapticEnabled) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+    
+    return true; // ✅ Retorna true quando adiciona com sucesso
   }, [metronomes, nextId, hapticEnabled]);
 
   // Deletar metrônomo
@@ -326,6 +335,7 @@ export const useMetronome = () => {
     performTap();
   }, [hapticEnabled, performTap]);
 
+  // ✅ RETURN MODIFICADO COM NOVAS PROPRIEDADES
   return {
     // Estado
     metronomes,
@@ -345,9 +355,13 @@ export const useMetronome = () => {
     toggleChannel,
     changeSoundType,
     stopAll,
-    pauseAll, // ← NOVA FUNÇÃO
+    pauseAll,
     tapTempo,
     resetTap,
     setHapticEnabled,
+    
+    // ✅ NOVAS PROPRIEDADES ADICIONADAS
+    canAddMore: metronomes.length < MAX_METRONOMES,
+    remainingSlots: MAX_METRONOMES - metronomes.length,
   };
 };
