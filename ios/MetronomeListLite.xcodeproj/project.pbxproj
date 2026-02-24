@@ -259,7 +259,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.sandrovingla.metronomelist.lite";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sandrovingla.metronomelist";
 				PRODUCT_NAME = "MetronomeListLite";
 				SWIFT_OBJC_BRIDGING_HEADER = "MetronomeListLite/MetronomeListLite-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -288,7 +288,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.sandrovingla.metronomelist.lite";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sandrovingla.metronomelist";
 				PRODUCT_NAME = "MetronomeListLite";
 				SWIFT_OBJC_BRIDGING_HEADER = "MetronomeListLite/MetronomeListLite-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;

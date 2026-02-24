@@ -19,7 +19,7 @@
     <key>CFBundlePackageType</key>
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>1.0.2</string>
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleURLTypes</key>
@@ -28,12 +28,20 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>metronomelist</string>
-          <string>com.sandrovingla.metronomelist.lite</string>
+          <string>com.sandrovingla.metronomelist</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>exp+metronome-list-app</string>
         </array>
       </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>3</string>
+    <key>GADDelayAppMeasurementInit</key>
+    <false/>
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>LSRequiresIPhoneOS</key>
@@ -52,7 +60,7 @@
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
     </array>
     <key>RCTNewArchEnabled</key>
-    <true/>
+    <false/>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
     <key>UIRequiredDeviceCapabilities</key>

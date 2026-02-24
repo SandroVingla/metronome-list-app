@@ -11,7 +11,7 @@ export const useMetronome = () => {
     {
       id: '1',
       name: 'Música 1',
-      bpm: 100,
+      bpm: 120,
       timeSignature: '4/4',
       isPlaying: false,
       volume: 1.0,
@@ -20,7 +20,7 @@ export const useMetronome = () => {
     {
       id: '2',
       name: 'Música 2',
-      bpm: 134,
+      bpm: 120,
       timeSignature: '4/4',
       isPlaying: false,
       volume: 1.0,
@@ -29,7 +29,7 @@ export const useMetronome = () => {
     {
       id: '3',
       name: 'Música 3',
-      bpm: 92,
+      bpm: 120,
       timeSignature: '4/4',
       isPlaying: false,
       volume: 1.0,

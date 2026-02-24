@@ -1,16 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useKeepAwake } from 'expo-keep-awake';
-import React from 'react';
 import {
   Alert,
   FlatList,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ControlPanel } from '../../components/ControlPanel';
 import { MetronomeItem } from '../../components/MetronomeItem';
 import {
@@ -19,7 +19,6 @@ import {
   UPGRADE_INFO
 } from '../../constants/limits';
 import { useMetronome } from '../../hooks/useMetronome';
-
 export default function HomeScreen() {
   useKeepAwake();
 
@@ -189,6 +188,13 @@ export default function HomeScreen() {
           </>
         }
       />
+       {/* Banner Ad */}
+      <View style={styles.adContainer}>
+        <BannerAd
+          unitId="ca-app-pub-4957093969222138/6792687058" 
+          size={BannerAdSize.BANNER}
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -198,6 +204,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0f172a',
   },
+  adContainer: {
+  alignItems: 'center',
+  paddingVertical: 8,
+  backgroundColor: '#0f172a',
+},
   header: {
     flexDirection: 'row',
     alignItems: 'center',

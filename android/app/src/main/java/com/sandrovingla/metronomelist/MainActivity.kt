@@ -1,4 +1,4 @@
-package com.sandrovingla.metronomelist.lite
+package com.sandrovingla.metronomelist
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

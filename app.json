@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Metronome List Lite",
-    "slug": "metronome-list-lite",
+    "slug": "metronome-list-app",
     "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -44,6 +44,12 @@
       "bundler": "metro"
     },
     "plugins": [
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-4957093969222138~3292425745"
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",
@@ -63,8 +69,7 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "extra": {
       "router": {},
