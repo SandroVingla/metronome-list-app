@@ -1,14 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useKeepAwake } from 'expo-keep-awake';
-import {
-  Alert,
-  FlatList,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, FlatList, Linking, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ControlPanel } from '../../components/ControlPanel';
@@ -73,8 +65,8 @@ export default function HomeScreen() {
         { 
           text: 'Fazer Upgrade',
           onPress: () => {
-            // TODO: Implementar compra in-app ou abrir Play Store
-            console.log('Abrir Play Store Pro');
+            Linking.openURL(
+              'https://play.google.com/store/apps/details?id=com.sandrovingla.metronomelist.pro');
           }
         }
       ]
